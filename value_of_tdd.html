@@ -182,13 +182,11 @@
       next_queue_length_field.innerHTML = this_many;
     };
     
-    var Customer = function(story_size_distributions)
+    var Customer = function(story_size_distribution)
     {
-      this._story_size_distributions = story_size_distributions;
+      this._story_size_distribution = story_size_distribution;
       this._deliver_one_new_story_this_often = 3;
       this._iterations_passed_since_story = 0;
-      
-      this.story_size_distribution = [1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
     };
     Customer.prototype.deliver_new_stories_to = function(queue)
     {
@@ -205,12 +203,12 @@
     };
     Customer.prototype._get_next_story = function()
     {
-      var max_distribution_index = this.story_size_distribution.length - 1;
+      var max_distribution_index = this._story_size_distribution.length - 1;
       
       //pick a random number between 0 and max_distribution_index
       var index_to_use = Math.round(Math.random() * max_distribution_index);
       var story = new UserStory();
-      story.size = this.story_size_distribution[index_to_use];
+      story.size = this._story_size_distribution[index_to_use];
       
       return story;
     };
@@ -237,15 +235,17 @@
       this._bug_queue.prioritize_and_move_bugs_to(this._next_queue);
     };
 
+    var global_story_size_distribution = [1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
+    
     var tdd_velocity = 1;
     var tdd_defect_to_story_point_ratio_per_iteration = .01; 
     var tdd_report = new Report('tdd_next_queue_length', 'tdd_done_queue_length', 'tdd_bugs_found_count');
-    var tdd_development_process = new DevelopmentProcess(new Customer(), new NextQueue(), new WipQueue(tdd_velocity), new DoneQueue(tdd_defect_to_story_point_ratio_per_iteration), new BugQueue(), tdd_report);
+    var tdd_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(tdd_velocity), new DoneQueue(tdd_defect_to_story_point_ratio_per_iteration), new BugQueue(), tdd_report);
     
     var std_velocity = 3;
     var std_defect_to_story_point_ratio_per_iteration = .02; 
     var std_report = new Report('std_next_queue_length', 'std_done_queue_length', 'std_bugs_found_count');
-    var std_development_process = new DevelopmentProcess(new Customer(), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_point_ratio_per_iteration), new BugQueue(), std_report);
+    var std_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_point_ratio_per_iteration), new BugQueue(), std_report);
     
     
     for(var i = 0; i < 1000; i++)
