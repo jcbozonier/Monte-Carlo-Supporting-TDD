@@ -1,8 +1,42 @@
 <html>
 <head>
   <title>On Unit Testing</title>
-  <script>
-    var NextQueue = function()
+</head>
+<body>
+  <h3>TDD Development Simulation</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>NEXT</th>
+        <th>DONE</th>
+        <th>BUGS</th>
+      </tr>
+    </thead>
+    <tr>
+      <td id='tdd_next_queue_length'></td>
+      <td id='tdd_done_queue_length'></td>
+      <td id='tdd_bugs_found_count'></td>
+    </tr>
+  </table>
+  <hr />
+  <h3>Standard Development Simulation</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>NEXT</th>
+        <th>DONE</th>
+        <th>BUGS</th>
+      </tr>
+    </thead>
+    <tr>
+      <td id='std_next_queue_length'></td>
+      <td id='std_done_queue_length'></td>
+      <td id='std_bugs_found_count'></td>
+    </tr>
+  </table>
+  
+  <script language="Javascript">
+    var NextQueue = function(report)
     {
       this._story_queue = [];
       var story_size_distribution = [1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
@@ -14,37 +48,77 @@
         this._story_queue.push(user_story);
       }
     };    
+    NextQueue.prototype.report_to = function(report)
+    {
+      report.that_backlog_size_is(this._story_queue.length);
+    };
     NextQueue.prototype.pull_next_story_to = function(queue)
     {
-      var backlog_length = this._story_queue.length;
-      alert('backlog length is: ' + backlog_length);
-    
+      if(this._story_queue.length == 0) return;
+      
       var next_story = this._story_queue.pop();
       
+      if(next_story == null) return;
       queue.add(next_story);
     };
     NextQueue.prototype.add_as_top_priority = function(story)
     {
+      if(story == null) return;
       this._story_queue.push(story);
     };
     
-    var WipQueue = function()
+    var WipQueue = function(velocity)
     {
-      this._velocity = 1;
+      this._velocity = velocity;
+      this._current_story = null;
+      this._current_work_remaining = 0;
+    };
+    WipQueue.prototype.work_from = function(queue)
+    {
+      if(this._current_work_remaining <= 0)
+      {
+        queue.pull_next_story_to(this);
+      }
+      else
+      {
+        this.work_on_current_story(); 
+      }
+    };
+    WipQueue.prototype.work_on_current_story = function()
+    {
+      this._current_work_remaining = this._current_work_remaining - this._velocity;
+    };
+    WipQueue.prototype.add = function(story)
+    {
+      this._current_story = story;
+      this._current_work_remaining = story.size;
+      this.work_on_current_story();      
+    }
+    WipQueue.prototype.move_finished_stories_to = function(queue)
+    {
+      if(this._current_work_remaining <= 0 && this._current_story != null)
+      {
+        var completed_story = this._current_story;
+        this._current_story = null;
+        queue.add(completed_story);
+      }
     };
     
-    var DoneQueue = function()
+    var DoneQueue = function(defect_to_story_point_ratio_per_iteration)
     {
-      this._failure_rate = .1;
+      this._failure_rate = defect_to_story_point_ratio_per_iteration;
       this._story_queue = [];
     };
     DoneQueue.prototype.add = function(story)
     {
+      if(story == null) return;
       this._story_queue.push(story);
     };
     DoneQueue.prototype.test_stories_and_pull_failures_to = function(queue)
     {
-      for(var story_index in this._story_queue)
+      var queue_length = this._story_queue.length;
+      
+      while(queue_length > 0)
       {
         var random_number = Math.random();
         
@@ -53,24 +127,40 @@
           var current_story = this._story_queue.pop();
           queue.add(current_story);
         }
+        
+        queue_length = queue_length - 1;
       }
+    };
+    DoneQueue.prototype.report_to = function(report)
+    {
+      report.total_completed_story_count_is(this._story_queue.length);
     };
     
     var BugQueue = function()
     {
       this._story_queue = [];
+      this._total_bug_count = 0;
     };
     BugQueue.prototype.add = function(story)
     {
+      if(story == null) return;
+      
+      this._total_bug_count = this._total_bug_count + 1;
       this._story_queue.push(story);
     };
     BugQueue.prototype.prioritize_and_move_bugs_to = function(queue)
     {
-      for(var index in this._story_queue)
+      var story = this._story_queue.pop();
+      
+      while(story != null)
       {
-        var story = this._story_queue[index];
         queue.add_as_top_priority(story);
+        story = this._story_queue.pop();
       }
+    };
+    BugQueue.prototype.report_to = function(report)
+    {
+      report.total_bugs_found_are(this._total_bug_count);
     };
     
     var UserStory = function()
@@ -78,44 +168,87 @@
     };
     UserStory.prototype.size = 0;
     
-    var DevelopmentProcess = function(next_queue, done_queue, bug_queue)
+    var Report = function(next_name, done_name, bugs_name)
     {
+      this._next_field_name = next_name;
+      this._done_field_name = done_name;
+      this._bugs_field_name = bugs_name;
+    };
+    Report.prototype.that_backlog_size_is = function(this_size)
+    {
+      var next_queue_length_field = document.getElementById(this._next_field_name);
+      next_queue_length_field.innerHTML = this_size;
+    };
+    Report.prototype.total_bugs_found_are = function(this_many)
+    {
+      var next_queue_length_field = document.getElementById(this._bugs_field_name);
+      next_queue_length_field.innerHTML = this_many;
+    };
+    Report.prototype.total_completed_story_count_is = function(this_many)
+    {
+      var next_queue_length_field = document.getElementById(this._done_field_name);
+      next_queue_length_field.innerHTML = this_many;
+    };
+    
+    var Customer = function(story_size_distributions)
+    {
+      this._story_size_distributions = story_size_distributions;
+      this._deliver_one_new_story_this_often = 3;
+      this._iterations_passed_since_story = 0;
+    };
+    Customer.prototype.deliver_new_stories_to = function(queue)
+    {
+      if(this._iterations_passed_since_story == this._deliver_one_new_story_this_often)
+      {
+        var story = new UserStory();
+        story.size = 1;
+        queue.add_as_top_priority(story);
+        this._iterations_passed_since_story = 0;
+      }
+      else
+      {
+        this._iterations_passed_since_story += 1;
+      }
+    };
+    
+    var DevelopmentProcess = function(customer, next_queue, wip_queue, done_queue, bug_queue, report)
+    {
+      this._customer = customer;
       this._next_queue = next_queue;
+      this._wip_queue = wip_queue;
       this._done_queue = done_queue;
       this._bug_queue = bug_queue;
+      this._report = report;
     };
     DevelopmentProcess.prototype.iterate = function()
     {
-      this._next_queue.pull_next_story_to(this._done_queue);
+      this._next_queue.report_to(this._report);
+      this._done_queue.report_to(this._report);
+      this._bug_queue.report_to(this._report);
+    
+      this._customer.deliver_new_stories_to(this._next_queue);
+      this._wip_queue.work_from(this._next_queue);
+      this._wip_queue.move_finished_stories_to(this._done_queue);
       this._done_queue.test_stories_and_pull_failures_to(this._bug_queue);
       this._bug_queue.prioritize_and_move_bugs_to(this._next_queue);
     };
+
+    var tdd_velocity = 3;
+    var tdd_defect_to_story_point_ratio_per_iteration = .01; 
+    var tdd_report = new Report('tdd_next_queue_length', 'tdd_done_queue_length', 'tdd_bugs_found_count');
+    var tdd_development_process = new DevelopmentProcess(new Customer(), new NextQueue(), new WipQueue(tdd_velocity), new DoneQueue(tdd_defect_to_story_point_ratio_per_iteration), new BugQueue(), tdd_report);
     
-    var development_process = new DevelopmentProcess(new NextQueue(), new DoneQueue(), new BugQueue());
-    development_process.iterate();
-    development_process.iterate();
-    development_process.iterate();
-    development_process.iterate();
-    development_process.iterate();
-    development_process.iterate();
-    development_process.iterate();
+    var std_velocity = 3;
+    var std_defect_to_story_point_ratio_per_iteration = .05; 
+    var std_report = new Report('std_next_queue_length', 'std_done_queue_length', 'std_bugs_found_count');
+    var std_development_process = new DevelopmentProcess(new Customer(), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_point_ratio_per_iteration), new BugQueue(), std_report);
     
+    
+    for(var i = 0; i < 1000; i++)
+    {
+      tdd_development_process.iterate();
+      std_development_process.iterate();
+    }
   </script>
-</head>
-<body>
-  <table>
-    <thead>
-      <tr>
-        <th>NEXT</th>
-        <th>DONE</th>
-        <th>BUGS</th>
-      </tr>
-    </thead>
-    <tr>
-      <td></td>
-      <td></td>
-      <td></td>
-    </tr>
-  </table>
 </body>
 </html>
