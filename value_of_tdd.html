@@ -242,7 +242,7 @@
       this._bug_queue.prioritize_and_move_bugs_to(this._next_queue);
     };
 
-    var global_story_size_distribution = [1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
+    var global_story_size_distribution = [0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3];
     
     var tdd_velocity = 1;
     var tdd_defect_to_story_ratio_per_iteration = .0003; 
@@ -254,7 +254,7 @@
     var std_report = new Report('std_next_queue_length', 'std_done_queue_length', 'std_bugs_found_count');
     var std_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_ratio_per_iteration), new BugQueue(), std_report);
         
-    for(var i = 0; i < 3000; i++)
+    for(var i = 0; i < 5000; i++)
     {
       tdd_development_process.iterate();
       std_development_process.iterate();
