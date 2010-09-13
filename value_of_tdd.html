@@ -1,8 +1,15 @@
 <html>
 <head>
-  <title>On Unit Testing</title>
+  <title>On The Value of TDD</title>
 </head>
 <body>
+  <h2>Seeing Through the Religion</h2>
+  <p>
+    Programmers who employ Test Driven Development techniques enable higher throughput by automating their tests and reducing the probability that new changes will cause malfunctions in existing code.
+    This page is a simulation which allow you to draw your own conclusions about the practice and run your own what-if scenarios.
+    
+  </p>
+
   <h3>TDD Development Simulation</h3>
   <table>
     <thead>
@@ -238,16 +245,16 @@
     var global_story_size_distribution = [1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4];
     
     var tdd_velocity = 1;
-    var tdd_defect_to_story_point_ratio_per_iteration = .01; 
+    var tdd_defect_to_story_ratio_per_iteration = .0003; 
     var tdd_report = new Report('tdd_next_queue_length', 'tdd_done_queue_length', 'tdd_bugs_found_count');
-    var tdd_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(tdd_velocity), new DoneQueue(tdd_defect_to_story_point_ratio_per_iteration), new BugQueue(), tdd_report);
+    var tdd_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(tdd_velocity), new DoneQueue(tdd_defect_to_story_ratio_per_iteration), new BugQueue(), tdd_report);
     
     var std_velocity = 3;
-    var std_defect_to_story_point_ratio_per_iteration = .02; 
+    var std_defect_to_story_ratio_per_iteration = .0015; 
     var std_report = new Report('std_next_queue_length', 'std_done_queue_length', 'std_bugs_found_count');
-    var std_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_point_ratio_per_iteration), new BugQueue(), std_report);
+    var std_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_ratio_per_iteration), new BugQueue(), std_report);
         
-    for(var i = 0; i < 1000; i++)
+    for(var i = 0; i < 3000; i++)
     {
       tdd_development_process.iterate();
       std_development_process.iterate();
