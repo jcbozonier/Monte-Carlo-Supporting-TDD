@@ -246,8 +246,7 @@
     var std_defect_to_story_point_ratio_per_iteration = .02; 
     var std_report = new Report('std_next_queue_length', 'std_done_queue_length', 'std_bugs_found_count');
     var std_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_point_ratio_per_iteration), new BugQueue(), std_report);
-    
-    
+        
     for(var i = 0; i < 1000; i++)
     {
       tdd_development_process.iterate();
