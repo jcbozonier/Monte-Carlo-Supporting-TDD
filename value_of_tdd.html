@@ -69,38 +69,41 @@
     var WipQueue = function(velocity)
     {
       this._velocity = velocity;
+      this._completed_stories = [];
       this._current_story = null;
       this._current_work_remaining = 0;
     };
     WipQueue.prototype.work_from = function(queue)
-    {
-      if(this._current_work_remaining <= 0)
+    {    
+      for(var i=0; i < this._velocity; i++)
       {
-        queue.pull_next_story_to(this);
+        if(this._current_story == null)
+          queue.pull_next_story_to(this);
+        
+        this._current_work_remaining -= 1;
+        
+        if(this._current_work_remaining <= 0)
+        {
+          if(this._current_story != null)
+            this._completed_stories.push(this._current_story);
+          queue.pull_next_story_to(this);
+        }
       }
-      else
-      {
-        this.work_on_current_story(); 
-      }
-    };
-    WipQueue.prototype.work_on_current_story = function()
-    {
-      this._current_work_remaining = this._current_work_remaining - this._velocity;
     };
     WipQueue.prototype.add = function(story)
     {
       this._current_story = story;
-      this._current_work_remaining = story.size;
-      this.work_on_current_story();      
+      this._current_work_remaining = story.size; 
     }
     WipQueue.prototype.move_finished_stories_to = function(queue)
     {
-      if(this._current_work_remaining <= 0 && this._current_story != null)
+      for(var index in this._completed_stories)
       {
-        var completed_story = this._current_story;
-        this._current_story = null;
+        var completed_story = this._completed_stories[index];
         queue.add(completed_story);
       }
+      
+      this._completed_stories = [];
     };
     
     var DoneQueue = function(defect_to_story_point_ratio_per_iteration)
@@ -192,20 +195,14 @@
     var Customer = function(story_size_distribution)
     {
       this._story_size_distribution = story_size_distribution;
-      this._deliver_one_new_story_this_often = 3;
-      this._iterations_passed_since_story = 0;
+      this._deliver_this_many_stories_each_iteration = 2;
     };
     Customer.prototype.deliver_new_stories_to = function(queue)
     {
-      if(this._iterations_passed_since_story == this._deliver_one_new_story_this_often)
+      for(var i=0; i<this._deliver_this_many_stories_each_iteration; i++)
       {
         var story = this._get_next_story();
         queue.add_as_top_priority(story);
-        this._iterations_passed_since_story = 0;
-      }
-      else
-      {
-        this._iterations_passed_since_story += 1;
       }
     };
     Customer.prototype._get_next_story = function()
@@ -244,17 +241,17 @@
 
     var global_story_size_distribution = [0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3];
     
-    var tdd_velocity = 1;
-    var tdd_defect_to_story_ratio_per_iteration = .0003; 
+    var tdd_velocity = 6;
+    var tdd_defect_to_story_ratio_per_iteration = .01; 
     var tdd_report = new Report('tdd_next_queue_length', 'tdd_done_queue_length', 'tdd_bugs_found_count');
     var tdd_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(tdd_velocity), new DoneQueue(tdd_defect_to_story_ratio_per_iteration), new BugQueue(), tdd_report);
     
-    var std_velocity = 3;
-    var std_defect_to_story_ratio_per_iteration = .0015; 
+    var std_velocity = 15;
+    var std_defect_to_story_ratio_per_iteration = .06; 
     var std_report = new Report('std_next_queue_length', 'std_done_queue_length', 'std_bugs_found_count');
     var std_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_ratio_per_iteration), new BugQueue(), std_report);
         
-    for(var i = 0; i < 5000; i++)
+    for(var i = 0; i < 52; i++)
     {
       tdd_development_process.iterate();
       std_development_process.iterate();
