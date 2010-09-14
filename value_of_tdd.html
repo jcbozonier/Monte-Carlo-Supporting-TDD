@@ -96,19 +96,27 @@
       var global_story_size_distribution = [0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3];
       var tdd_std_comparison_chart = new Chart();
       
-      var tdd_development_process = create_tdd_development(tdd_std_comparison_chart, global_story_size_distribution);
-      var tdd_development_process1 = create_tdd_development(tdd_std_comparison_chart, global_story_size_distribution);
+      var development_teams = [];
+      var number_of_teams_to_compare = 50;
       
-      var std_development_process = create_std_development(tdd_std_comparison_chart, global_story_size_distribution);
-      var std_development_process1 = create_std_development(tdd_std_comparison_chart, global_story_size_distribution);
+      for(var tdd_teams_to_add = number_of_teams_to_compare; tdd_teams_to_add > 0; tdd_teams_to_add--)
+      {
+        var tdd_developmental_process = create_tdd_development(tdd_std_comparison_chart, global_story_size_distribution)
+        development_teams.push(tdd_developmental_process);
+      }
+      
+      for(var std_teams_to_add = number_of_teams_to_compare; std_teams_to_add > 0; std_teams_to_add--)
+      {
+        var std_developmental_process = create_std_development(tdd_std_comparison_chart, global_story_size_distribution)
+        development_teams.push(std_developmental_process);
+      }
       
       for(var i = 0; i < 2*52; i++)
-      {        
-        tdd_development_process.iterate();
-        tdd_development_process1.iterate();
-        
-        std_development_process.iterate();
-        std_development_process1.iterate();
+      {
+        for(var team_index in development_teams)
+        {
+          development_teams[team_index].iterate();
+        }
       }
       
       tdd_std_comparison_chart.draw_chart_to('value_delivered_chart');
