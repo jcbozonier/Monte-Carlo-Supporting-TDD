@@ -15,13 +15,15 @@
     <thead>
       <tr>
         <th>NEXT</th>
-        <th>DONE</th>
+        <th>Stories Delivered</th>
+        <th>Value Delivered</th>
         <th>BUGS</th>
       </tr>
     </thead>
     <tr>
       <td id='tdd_next_queue_length'></td>
-      <td id='tdd_done_queue_length'></td>
+      <td id='tdd_story_throughput'></td>
+      <td id='tdd_value_throughput'></td>
       <td id='tdd_bugs_found_count'></td>
     </tr>
   </table>
@@ -31,13 +33,15 @@
     <thead>
       <tr>
         <th>NEXT</th>
-        <th>DONE</th>
+        <th>Stories Delivered</th>
+        <th>Value Delivered</th>
         <th>BUGS</th>
       </tr>
     </thead>
     <tr>
       <td id='std_next_queue_length'></td>
-      <td id='std_done_queue_length'></td>
+      <td id='std_story_throughput'></td>
+      <td id='std_value_throughput'></td>
       <td id='std_bugs_found_count'></td>
     </tr>
   </table>
@@ -66,15 +70,20 @@
       this._story_queue.push(story);
     };
     
-    var WipQueue = function(velocity)
+    var WipQueue = function(minimum_velocity, max_velocity)
     {
-      this._velocity = velocity;
+      this._minimum_velocity = minimum_velocity;
+      this._velocity = minimum_velocity;
+      this._max_velocity = max_velocity;
       this._completed_stories = [];
       this._current_story = null;
       this._current_work_remaining = 0;
+      this._current_iteration = 0;
     };
     WipQueue.prototype.work_from = function(queue)
     {    
+      this._current_iteration += 1;
+      
       for(var i=0; i < this._velocity; i++)
       {
         if(this._current_story == null)
@@ -89,6 +98,17 @@
           queue.pull_next_story_to(this);
         }
       }
+      
+      this._ramp_up_velocity();
+    };
+    WipQueue.prototype._ramp_up_velocity = function()
+    {
+      // Using the logistic function to define a learning curve.
+      //this._velocity = this._max_velocity/(1+exp(-(this._current_iteration-4)/3))
+      
+      //using learning curve shape documented here: http://en.m.wikipedia.org/wiki/Learning_curves
+      //thanks to Robert Ream
+      this._velocity = this._max_velocity - (this._max_velocity - this._minimum_velocity) * Math.pow(this._current_iteration, -(1/2));
     };
     WipQueue.prototype.add = function(story)
     {
@@ -120,22 +140,29 @@
     {
       var queue_length = this._story_queue.length;
       
-      while(queue_length > 0)
+      for(var i = 0; i < queue_length; i++)
       {
         var random_number = Math.random();
         
         if(random_number <= this._failure_rate)
         {
-          var current_story = this._story_queue.pop();
-          queue.add(current_story);
+          var story_with_defect = this._story_queue[i];
+          var bug = new BugStory();
+          bug.size = story_with_defect.size;
+          
+          queue.add(bug);
         }
-        
-        queue_length = queue_length - 1;
       }
     };
     DoneQueue.prototype.report_to = function(report)
     {
-      report.total_completed_story_count_is(this._story_queue.length);
+      var value_sum = 0;
+      for(var i=0; i<this._story_queue.length; i++)
+      {
+        value_sum += this._story_queue[i].value;
+      }
+      report.total_value_delivered_is(value_sum);
+      report.total_story_count_delivered_is(this._story_queue.length);
     };
     
     var BugQueue = function()
@@ -169,11 +196,19 @@
     {
     };
     UserStory.prototype.size = 0;
+    UserStory.prototype.value = 1;
     
-    var Report = function(next_name, done_name, bugs_name)
+    var BugStory = function()
+    {
+    };
+    BugStory.prototype.size = 0;
+    BugStory.prototype.value = 0;
+    
+    var Report = function(next_name, story_throughput_field, value_throughput_field, bugs_name)
     {
       this._next_field_name = next_name;
-      this._done_field_name = done_name;
+      this._value_throughput_field = value_throughput_field;
+      this._story_throughput_field = story_throughput_field;
       this._bugs_field_name = bugs_name;
     };
     Report.prototype.that_backlog_size_is = function(this_size)
@@ -186,9 +221,14 @@
       var next_queue_length_field = document.getElementById(this._bugs_field_name);
       next_queue_length_field.innerHTML = this_many;
     };
-    Report.prototype.total_completed_story_count_is = function(this_many)
+    Report.prototype.total_value_delivered_is = function(this_many)
     {
-      var next_queue_length_field = document.getElementById(this._done_field_name);
+      var next_queue_length_field = document.getElementById(this._value_throughput_field);
+      next_queue_length_field.innerHTML = this_many;
+    };
+    Report.prototype.total_story_count_delivered_is = function(this_many)
+    {
+      var next_queue_length_field = document.getElementById(this._story_throughput_field);
       next_queue_length_field.innerHTML = this_many;
     };
     
@@ -221,7 +261,7 @@
     {
       this._customer = customer;
       this._next_queue = next_queue;
-      this._wip_queue = wip_queue;
+      this._development_team = wip_queue;
       this._done_queue = done_queue;
       this._bug_queue = bug_queue;
       this._report = report;
@@ -233,23 +273,24 @@
       this._bug_queue.report_to(this._report);
     
       this._customer.deliver_new_stories_to(this._next_queue);
-      this._wip_queue.work_from(this._next_queue);
-      this._wip_queue.move_finished_stories_to(this._done_queue);
+      this._development_team.work_from(this._next_queue);
+      this._development_team.move_finished_stories_to(this._done_queue);
       this._done_queue.test_stories_and_pull_failures_to(this._bug_queue);
       this._bug_queue.prioritize_and_move_bugs_to(this._next_queue);
     };
 
     var global_story_size_distribution = [0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3];
     
-    var tdd_velocity = 6;
-    var tdd_defect_to_story_ratio_per_iteration = .01; 
-    var tdd_report = new Report('tdd_next_queue_length', 'tdd_done_queue_length', 'tdd_bugs_found_count');
-    var tdd_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(tdd_velocity), new DoneQueue(tdd_defect_to_story_ratio_per_iteration), new BugQueue(), tdd_report);
+    var max_velocity_for_our_team = 12;
     
-    var std_velocity = 15;
-    var std_defect_to_story_ratio_per_iteration = .06; 
-    var std_report = new Report('std_next_queue_length', 'std_done_queue_length', 'std_bugs_found_count');
-    var std_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(std_velocity), new DoneQueue(std_defect_to_story_ratio_per_iteration), new BugQueue(), std_report);
+    var tdd_velocity = 2;
+    var tdd_defect_to_story_ratio_per_iteration = .025; 
+    var tdd_report = new Report('tdd_next_queue_length', 'tdd_story_throughput', 'tdd_value_throughput', 'tdd_bugs_found_count');
+    var tdd_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(tdd_velocity, max_velocity_for_our_team), new DoneQueue(tdd_defect_to_story_ratio_per_iteration), new BugQueue(), tdd_report);
+    
+    var std_defect_to_story_ratio_per_iteration = .03; 
+    var std_report = new Report('std_next_queue_length', 'std_story_throughput', 'std_value_throughput', 'std_bugs_found_count');
+    var std_development_process = new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new WipQueue(max_velocity_for_our_team, max_velocity_for_our_team), new DoneQueue(std_defect_to_story_ratio_per_iteration), new BugQueue(), std_report);
         
     for(var i = 0; i < 52; i++)
     {
