@@ -15,10 +15,29 @@ ProductBacklog.prototype.pull_next_story_to = function(queue)
   if(next_story == null) return;
   queue.add(next_story);
 };
-ProductBacklog.prototype.add_as_top_priority = function(story)
+ProductBacklog.prototype.add_bug = function(story)
 {
   if(story == null) return;
-  this._story_queue.push(story);
+  
+  var queued_stories = this._story_queue;
+  this._story_queue = new Array(queued_stories.length + 1);
+  
+  var index_for_bug = Math.ceil(Math.random() * queued_stories.length);
+  
+  for(var i=queued_stories.length; i >= 0 ; i--)
+  {
+    if(index_for_bug == i)
+    {
+      this._story_queue[i] = story;
+    }
+    else
+    {
+      var old_story = queued_stories.pop();
+      if(old_story == null) throw "A null should not happen here!";
+      
+      this._story_queue[i] = old_story
+    }
+  }
 };
 
 var DevelopmentTeam = function(minimum_velocity, max_velocity)
@@ -68,10 +87,12 @@ DevelopmentTeam.prototype.add = function(story)
 }
 DevelopmentTeam.prototype.move_finished_stories_to = function(queue)
 {
-  for(var index in this._completed_stories)
+  var story = this._completed_stories.pop();
+  
+  while(story != null)
   {
-    var completed_story = this._completed_stories[index];
-    queue.add(completed_story);
+    queue.add(story);
+    story = this._completed_stories.pop();
   }
   
   this._completed_stories = [];
@@ -91,7 +112,7 @@ EndUsers.prototype.test_stories_and_report_failures_to = function(queue)
 {
   var queue_length = this._story_queue.length;
   
-  for(var i = 0; i < queue_length; i++)
+  for(var i = queue_length-1; i >= 0; i--)
   {
     var random_number = Math.random();
     
@@ -110,7 +131,7 @@ EndUsers.prototype.test_stories_and_report_failures_to = function(queue)
 EndUsers.prototype.report_to = function(report)
 {
   var value_sum = 0;
-  for(var i=0; i<this._story_queue.length; i++)
+  for(var i=this._story_queue.length-1; i >= 0; i--)
   {
     value_sum += this._story_queue[i].value;
   }
@@ -136,7 +157,7 @@ SupportTeam.prototype.prioritize_and_move_bugs_to = function(queue)
   
   while(story != null)
   {
-    queue.add_as_top_priority(story);
+    queue.add_bug(story);
     story = this._story_queue.pop();
   }
 };
@@ -163,11 +184,11 @@ var BusinessCustomers = function(story_size_distribution)
 };
 BusinessCustomers.prototype.deliver_new_stories_to = function(queue)
 {
-  var stories_to_deliver = Math.round(Math.random() * 20);
+  var stories_to_deliver = Math.ceil(Math.random() * 8);
   for(var i=0; i<stories_to_deliver; i++)
   {
     var story = this._get_next_story();
-    queue.add_as_top_priority(story);
+    queue.add_bug(story);
   }
 };
 BusinessCustomers.prototype._get_next_story = function()
@@ -198,10 +219,10 @@ DevelopmentProcess.prototype.iterate = function()
   this._done_queue.report_to(this._report);
   this._bug_queue.report_to(this._report);
 
-  this._customer.deliver_new_stories_to(this._next_queue);
   this._development_team.work_from(this._next_queue);
   this._development_team.move_finished_stories_to(this._done_queue);
   this._done_queue.test_stories_and_report_failures_to(this._bug_queue);
+  this._customer.deliver_new_stories_to(this._next_queue);
   this._bug_queue.prioritize_and_move_bugs_to(this._next_queue);
 };
 
