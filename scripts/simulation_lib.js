@@ -77,17 +77,17 @@ DevelopmentTeam.prototype.move_finished_stories_to = function(queue)
   this._completed_stories = [];
 };
 
-var DoneQueue = function(defect_to_story_point_ratio_per_iteration)
+var EndUsers = function(defect_to_story_point_ratio_per_iteration)
 {
   this._failure_rate = defect_to_story_point_ratio_per_iteration;
   this._story_queue = [];
 };
-DoneQueue.prototype.add = function(story)
+EndUsers.prototype.add = function(story)
 {
   if(story == null) return;
   this._story_queue.push(story);
 };
-DoneQueue.prototype.test_stories_and_pull_failures_to = function(queue)
+EndUsers.prototype.test_stories_and_report_failures_to = function(queue)
 {
   var queue_length = this._story_queue.length;
   
@@ -106,7 +106,7 @@ DoneQueue.prototype.test_stories_and_pull_failures_to = function(queue)
     }
   }
 };
-DoneQueue.prototype.report_to = function(report)
+EndUsers.prototype.report_to = function(report)
 {
   var value_sum = 0;
   for(var i=0; i<this._story_queue.length; i++)
@@ -154,7 +154,7 @@ var BugStory = function()
 {
 };
 BugStory.prototype.size = 0;
-BugStory.prototype.value = .1;
+BugStory.prototype.value = 0;
 
 var Customer = function(story_size_distribution)
 {
@@ -200,7 +200,7 @@ DevelopmentProcess.prototype.iterate = function()
   this._customer.deliver_new_stories_to(this._next_queue);
   this._development_team.work_from(this._next_queue);
   this._development_team.move_finished_stories_to(this._done_queue);
-  this._done_queue.test_stories_and_pull_failures_to(this._bug_queue);
+  this._done_queue.test_stories_and_report_failures_to(this._bug_queue);
   this._bug_queue.prioritize_and_move_bugs_to(this._next_queue);
 };
 
