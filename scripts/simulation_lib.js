@@ -1,12 +1,12 @@
-var NextQueue = function(report)
+var ProductBacklog = function(report)
 {
   this._story_queue = [];
 };    
-NextQueue.prototype.report_to = function(report)
+ProductBacklog.prototype.report_to = function(report)
 {
   report.that_backlog_size_is(this._story_queue.length);
 };
-NextQueue.prototype.pull_next_story_to = function(queue)
+ProductBacklog.prototype.pull_next_story_to = function(queue)
 {
   if(this._story_queue.length == 0) return;
   
@@ -15,7 +15,7 @@ NextQueue.prototype.pull_next_story_to = function(queue)
   if(next_story == null) return;
   queue.add(next_story);
 };
-NextQueue.prototype.add_as_top_priority = function(story)
+ProductBacklog.prototype.add_as_top_priority = function(story)
 {
   if(story == null) return;
   this._story_queue.push(story);
@@ -37,17 +37,17 @@ DevelopmentTeam.prototype.work_from = function(queue)
   
   for(var i=0; i < this._velocity; i++)
   {
-	if(this._current_story == null)
-	  queue.pull_next_story_to(this);
-	
-	this._current_work_remaining -= 1;
-	
-	if(this._current_work_remaining <= 0)
-	{
-	  if(this._current_story != null)
-		this._completed_stories.push(this._current_story);
-	  queue.pull_next_story_to(this);
-	}
+    if(this._current_story == null)
+      queue.pull_next_story_to(this);
+    
+    this._current_work_remaining -= 1;
+    
+    if(this._current_work_remaining <= 0)
+    {
+      if(this._current_story != null)
+      this._completed_stories.push(this._current_story);
+      queue.pull_next_story_to(this);
+    }
   }
   
   this._ramp_up_velocity();
@@ -100,6 +100,7 @@ EndUsers.prototype.test_stories_and_report_failures_to = function(queue)
       var story_with_defect = this._story_queue[i];
       var bug = new BugStory();
       // Use a probability distribution for bug size that more closely matches our reality @ work.
+      bug.value = 0;
       bug.size = story_with_defect.size;
       
       queue.add(bug);
@@ -117,29 +118,29 @@ EndUsers.prototype.report_to = function(report)
   report.total_story_count_delivered_is(this._story_queue.length);
 };
 
-var BugQueue = function()
+var SupportTeam = function()
 {
   this._story_queue = [];
   this._total_bug_count = 0;
 };
-BugQueue.prototype.add = function(story)
+SupportTeam.prototype.add = function(story)
 {
   if(story == null) return;
   
   this._total_bug_count = this._total_bug_count + 1;
   this._story_queue.push(story);
 };
-BugQueue.prototype.prioritize_and_move_bugs_to = function(queue)
+SupportTeam.prototype.prioritize_and_move_bugs_to = function(queue)
 {
   var story = this._story_queue.pop();
   
   while(story != null)
   {
-	queue.add_as_top_priority(story);
-	story = this._story_queue.pop();
+    queue.add_as_top_priority(story);
+    story = this._story_queue.pop();
   }
 };
-BugQueue.prototype.report_to = function(report)
+SupportTeam.prototype.report_to = function(report)
 {
   report.total_bugs_found_are(this._total_bug_count);
 };
@@ -156,20 +157,20 @@ var BugStory = function()
 BugStory.prototype.size = 0;
 BugStory.prototype.value = 0;
 
-var Customer = function(story_size_distribution)
+var BusinessCustomers = function(story_size_distribution)
 {
   this._story_size_distribution = story_size_distribution;
-  this._deliver_this_many_stories_each_iteration = 2;
 };
-Customer.prototype.deliver_new_stories_to = function(queue)
+BusinessCustomers.prototype.deliver_new_stories_to = function(queue)
 {
-  for(var i=0; i<this._deliver_this_many_stories_each_iteration; i++)
+  var stories_to_deliver = Math.round(Math.random() * 20);
+  for(var i=0; i<stories_to_deliver; i++)
   {
-	var story = this._get_next_story();
-	queue.add_as_top_priority(story);
+    var story = this._get_next_story();
+    queue.add_as_top_priority(story);
   }
 };
-Customer.prototype._get_next_story = function()
+BusinessCustomers.prototype._get_next_story = function()
 {
   var max_distribution_index = this._story_size_distribution.length - 1;
   

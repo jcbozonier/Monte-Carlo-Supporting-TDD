@@ -85,18 +85,18 @@
     function create_tdd_development(tdd_std_comparison_chart, global_story_size_distribution)
     {
       var tdd_minimum_velocity = 1;
-      var tdd_max_velocity = 12;
-      var tdd_defect_to_story_ratio_per_iteration = .001; 
+      var tdd_max_velocity = 24;
+      var tdd_defect_to_story_ratio_per_iteration = 0.001; 
       var tdd_report = new Report('tdd_next_queue_length', 'tdd_story_throughput', 'tdd_value_throughput', 'tdd_bugs_found_count', 'green', tdd_std_comparison_chart);
-      return new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new DevelopmentTeam(tdd_minimum_velocity, tdd_max_velocity), new EndUsers(tdd_defect_to_story_ratio_per_iteration), new BugQueue(), tdd_report);
+      return new DevelopmentProcess(new BusinessCustomers(global_story_size_distribution), new ProductBacklog(), new DevelopmentTeam(tdd_minimum_velocity, tdd_max_velocity), new EndUsers(tdd_defect_to_story_ratio_per_iteration), new SupportTeam(), tdd_report);
     }
     
     function create_std_development(tdd_std_comparison_chart, global_story_size_distribution)
     {
-      var max_velocity_for_our_team = 12;
-      var std_defect_to_story_ratio_per_iteration = .003; 
+      var max_velocity_for_our_team = 24;
+      var std_defect_to_story_ratio_per_iteration = 1; 
       var std_report = new Report('std_next_queue_length', 'std_story_throughput', 'std_value_throughput', 'std_bugs_found_count', 'red', tdd_std_comparison_chart);
-      return new DevelopmentProcess(new Customer(global_story_size_distribution), new NextQueue(), new DevelopmentTeam(max_velocity_for_our_team, max_velocity_for_our_team), new EndUsers(std_defect_to_story_ratio_per_iteration), new BugQueue(), std_report);
+      return new DevelopmentProcess(new BusinessCustomers(global_story_size_distribution), new ProductBacklog(), new DevelopmentTeam(max_velocity_for_our_team, max_velocity_for_our_team), new EndUsers(std_defect_to_story_ratio_per_iteration), new SupportTeam(), std_report);
     }
   
     function run_simulation()
@@ -105,7 +105,7 @@
       var tdd_std_comparison_chart = new Chart();
       
       var development_teams = [];
-      var number_of_teams_to_simulate = 5;
+      var number_of_teams_to_simulate = 20;
       
       for(var tdd_teams_to_add = number_of_teams_to_simulate; tdd_teams_to_add > 0; tdd_teams_to_add--)
       {
