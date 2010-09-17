@@ -10,121 +10,32 @@
   <script language="JavaScript" src="scripts/RGraph.common.core.js"></script>
   <script language="JavaScript" src="scripts/RGraph.scatter.js"></script>
   <script language="JavaScript" src="scripts/simulation_lib.js"></script>
-  <script language="Javascript"> 
-    var Chart = function()
-    {
-      this._data = [];
-    };
-    Chart.prototype.plot = function(x, y, color)
-    {
-      this._data.push([x, y, color, 'Iteration:' + x +' Value:' + Math.floor(y)]);
-    }
-    Chart.prototype.set_x_labels = function(labels)
-    {
-      this._x_labels = labels;
-    };
-    Chart.prototype.draw_chart_to = function(canvas_id)
-    {
-      var sg = new RGraph.Scatter(canvas_id, this._data);
-      sg.Set('chart.background.barcolor1','rgba(255,255,255,1)');
-      sg.Set('chart.background.barcolor2', 'rgba(255,255,255,1)');
-      sg.Set('chart.grid.color', 'rgba(238,238,238,1)');
-      sg.Set('chart.ticksize', 3);
-      sg.Set('chart.tickmarks', 'cross');
-      sg.Set('chart.gutter', 35);
-      
-      /*
-      sg.Set('chart.crosshairs', true);
-      sg.Set('chart.crosshairs.coords', true);
-      sg.Set('chart.crosshairs.labels.x', 'Iteration #');
-      sg.Set('chart.crosshairs.labels.y', 'Cumulative Value Delivered');
-      */
-      sg.Set('chart.xmax', this._x_labels.length); // Important!
-      sg.Draw();
-    };
-    
-    var Report = function(next_name, story_throughput_field, value_throughput_field, bugs_name, color, chart)
-    {
-      this._next_field_name = next_name;
-      this._value_throughput_field = value_throughput_field;
-      this._story_throughput_field = story_throughput_field;
-      this._bugs_field_name = bugs_name;
-      this._iteration = 0;
-      this._iteration_ids = [];
-      this._chart = chart;
-      this._color = color;
-    };
-    Report.prototype.that_backlog_size_is = function(this_size)
-    {
-      //var next_queue_length_field = document.getElementById(this._next_field_name);
-      //next_queue_length_field.innerHTML = this_size;
-    };
-    Report.prototype.total_bugs_found_are = function(this_many)
-    {
-      //var next_queue_length_field = document.getElementById(this._bugs_field_name);
-      //next_queue_length_field.innerHTML = this_many;
-    };
-    Report.prototype.total_value_delivered_is = function(this_many)
-    {
-      this._chart.plot(this._iteration, this_many, this._color);
-      
-      //var next_queue_length_field = document.getElementById(this._value_throughput_field);
-      //next_queue_length_field.innerHTML = this_many;
-    };
-    Report.prototype.total_story_count_delivered_is = function(this_many)
-    {
-      //var next_queue_length_field = document.getElementById(this._story_throughput_field);
-      //next_queue_length_field.innerHTML = this_many;
-    };
-    Report.prototype.next_iteration = function()
-    {
-      this._iteration_ids.push(this._iteration++);
-      this._chart.set_x_labels(this._iteration_ids);
-    };
-    
-    function create_tdd_development(tdd_std_comparison_chart, global_story_size_distribution)
-    {
-      var tdd_minimum_velocity = 1;
-      var tdd_max_velocity = 20;
-      var tdd_defect_to_story_ratio_per_iteration = 0; 
-      var tdd_report = new Report('tdd_next_queue_length', 'tdd_story_throughput', 'tdd_value_throughput', 'tdd_bugs_found_count', 'green', tdd_std_comparison_chart);
-      return new DevelopmentProcess(new BusinessCustomers(global_story_size_distribution), new ProductBacklog(), new DevelopmentTeam(tdd_minimum_velocity, tdd_max_velocity), new EndUsers(tdd_defect_to_story_ratio_per_iteration), new SupportTeam(), tdd_report);
-    }
-    
-    function create_std_development(tdd_std_comparison_chart, global_story_size_distribution)
-    {
-      var max_velocity_for_our_team = 20;
-      var std_defect_to_story_ratio_per_iteration = .01; 
-      var std_report = new Report('std_next_queue_length', 'std_story_throughput', 'std_value_throughput', 'std_bugs_found_count', 'red', tdd_std_comparison_chart);
-      return new DevelopmentProcess(new BusinessCustomers(global_story_size_distribution), new ProductBacklog(), new DevelopmentTeam(max_velocity_for_our_team, max_velocity_for_our_team), new EndUsers(std_defect_to_story_ratio_per_iteration), new SupportTeam(), std_report);
-    }
-  
+  <script language="Javascript">           
     function run_simulation()
     {      
-      var global_story_size_distribution = [0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 8];
+      var simulation_settings =
+      {
+        'teams_to_simulate' : 15,
+        'weeks_to_project' : 2 * 52,
+        'story_size_distribution' : [0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4],
+        'tdd_defect_ratio' : .07,
+        'min_tdd_velocity' : 1,
+        'max_tdd_velocity' : 16,
+        'std_defect_ratio' : .14,
+        'min_std_velocity' : 20,
+        'max_std_velocity' : 20,
+      };
+      
       var tdd_std_comparison_chart = new Chart();
+      var developmentProcessFactory = new DevelopmentProcessFactory(tdd_std_comparison_chart);
       
-      var development_teams = [];
-      var number_of_teams_to_simulate = 100;
+      var simulated_development_teams = new SimulatedDevelopmentTeams(simulation_settings);
+      simulated_development_teams.create_required_tdd_teams_using(developmentProcessFactory);
+      simulated_development_teams.create_required_std_teams_using(developmentProcessFactory);
       
-      for(var tdd_teams_to_add = number_of_teams_to_simulate; tdd_teams_to_add > 0; tdd_teams_to_add--)
+      for(var i = 0; i < simulation_settings.weeks_to_project; i++)
       {
-        var tdd_developmental_process = create_tdd_development(tdd_std_comparison_chart, global_story_size_distribution)
-        development_teams.push(tdd_developmental_process);
-      }
-      
-      for(var std_teams_to_add = number_of_teams_to_simulate; std_teams_to_add > 0; std_teams_to_add--)
-      {
-        var std_developmental_process = create_std_development(tdd_std_comparison_chart, global_story_size_distribution)
-        development_teams.push(std_developmental_process);
-      }
-      
-      for(var i = 0; i < 2*52; i++)
-      {
-        for(var team_index in development_teams)
-        {
-          development_teams[team_index].iterate();
-        }
+        simulated_development_teams.iterate();
       }
       
       tdd_std_comparison_chart.draw_chart_to('value_delivered_chart');
