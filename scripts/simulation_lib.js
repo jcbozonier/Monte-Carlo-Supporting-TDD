@@ -95,10 +95,11 @@ DevelopmentTeam.prototype.move_finished_stories_to = function(queue)
   this._completed_stories = [];
 };
 
-var EndUsers = function(defect_to_story_point_ratio_per_iteration)
+var EndUsers = function(defect_to_story_point_ratio_per_iteration, bug_size_distribution)
 {
   this._failure_rate = defect_to_story_point_ratio_per_iteration;
   this._story_queue = [];
+  this._bug_size_distribution = bug_size_distribution;
 };
 EndUsers.prototype.add = function(story)
 {
@@ -115,9 +116,8 @@ EndUsers.prototype.test_stories_and_report_failures_to = function(queue)
     
     if(random_number <= this._failure_rate)
     {
-      var bug_size_distribution = [0,0,0,1,1,1,1,1,1,1,1,1,2,2,2,2,2,4,4];
-      var bug_size_index = Math.floor(Math.random() * bug_size_distribution.length);
-      var bug_size = bug_size_distribution[bug_size_index];
+      var bug_size_index = Math.floor(Math.random() * this._bug_size_distribution.length);
+      var bug_size = this._bug_size_distribution[bug_size_index];
       
       var bug = new BugStory();
       bug.value = 0;
@@ -270,7 +270,7 @@ DevelopmentProcessFactory.prototype.create_tdd_development = function (simulatio
   var business_customers = new BusinessCustomers(simulation_settings.story_size_distribution);
   var product_backlog = new ProductBacklog();
   var development_team = new DevelopmentTeam(simulation_settings.min_tdd_velocity, simulation_settings.max_tdd_velocity);
-  var end_users = new EndUsers(simulation_settings.tdd_defect_ratio);
+  var end_users = new EndUsers(simulation_settings.tdd_defect_ratio, simulation_settings.bug_size_distribution);
   var support_team = new SupportTeam();
   
   return new DevelopmentProcess(business_customers, product_backlog, development_team, end_users, support_team, tdd_report);
@@ -282,7 +282,7 @@ DevelopmentProcessFactory.prototype.create_std_development = function(simulation
   var business_customers = new BusinessCustomers(simulation_settings.story_size_distribution);
   var product_backlog = new ProductBacklog();
   var development_team = new DevelopmentTeam(simulation_settings.min_std_velocity, simulation_settings.max_std_velocity);
-  var end_users = new EndUsers(simulation_settings.std_defect_ratio);
+  var end_users = new EndUsers(simulation_settings.std_defect_ratio, simulation_settings.bug_size_distribution);
   var support_team = new SupportTeam();
   
   return new DevelopmentProcess(business_customers, product_backlog, development_team, end_users, support_team, std_report);

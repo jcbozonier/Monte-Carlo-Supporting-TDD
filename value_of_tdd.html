@@ -15,9 +15,10 @@
     {      
       var simulation_settings =
       {
-        'teams_to_simulate' : 15,
+        'teams_to_simulate' : 50,
         'weeks_to_project' : 2 * 52,
-        'story_size_distribution' : [0, 1, 1, 1, 1, 1, 1, 2, 2, 3, 3, 4],
+        'story_size_distribution' : [0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4],
+        'bug_size_distribution' : [0,0,0,1,1,1,1,1,1,1,1,1,2,2,2,2,2,4,4],
         'tdd_defect_ratio' : .07,
         'min_tdd_velocity' : 1,
         'max_tdd_velocity' : 16,
@@ -40,8 +41,6 @@
       
       tdd_std_comparison_chart.draw_chart_to('value_delivered_chart');
     }
-    
-    window.onload = run_simulation;
   </script>
 </head>
 <body>
@@ -52,6 +51,9 @@
   </p>
 
   <h3>TDD Development Simulation</h3>
+  
+  <input type='button' value='Run Simulation' onclick='run_simulation();' />
+  <br />
   <canvas id='value_delivered_chart' width="600" height="350"></canvas>
 </body>
 </html>
