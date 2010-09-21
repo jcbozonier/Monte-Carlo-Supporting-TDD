@@ -15,8 +15,8 @@
     {      
       var simulation_settings =
       {
-        'teams_to_simulate' : 50,
-        'weeks_to_project' : 2 * 52,
+        'teams_to_simulate' : 10,
+        'weeks_to_project' : 1 * 52,
         'story_size_distribution' : [0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4],
         'bug_size_distribution' : [0,0,0,1,1,1,1,1,1,1,1,1,2,2,2,2,2,4,4],
         'tdd_defect_ratio' : .07,
@@ -31,8 +31,8 @@
       var developmentProcessFactory = new DevelopmentProcessFactory(tdd_std_comparison_chart);
       
       var simulated_development_teams = new SimulatedDevelopmentTeams(simulation_settings);
-      simulated_development_teams.create_required_tdd_teams_using(developmentProcessFactory);
-      simulated_development_teams.create_required_std_teams_using(developmentProcessFactory);
+      simulated_development_teams.create_tdd_development_teams_using(developmentProcessFactory);
+      simulated_development_teams.create_standard_development_teams_using(developmentProcessFactory);
       
       for(var i = 0; i < simulation_settings.weeks_to_project; i++)
       {

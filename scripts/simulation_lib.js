@@ -1,10 +1,6 @@
 var ProductBacklog = function(report)
 {
   this._story_queue = [];
-};    
-ProductBacklog.prototype.report_to = function(report)
-{
-  report.that_backlog_size_is(this._story_queue.length);
 };
 ProductBacklog.prototype.pull_next_story_to = function(queue)
 {
@@ -40,8 +36,9 @@ ProductBacklog.prototype.add_bug = function(story)
   }
 };
 
-var DevelopmentTeam = function(minimum_velocity, max_velocity)
+var DevelopmentTeam = function(minimum_velocity, max_velocity, story_size_distribution)
 {
+  this._story_size_distribution = story_size_distribution;
   this._minimum_velocity = minimum_velocity;
   this._velocity = minimum_velocity;
   this._max_velocity = max_velocity;
@@ -79,6 +76,10 @@ DevelopmentTeam.prototype._ramp_up_velocity = function()
 };
 DevelopmentTeam.prototype.add = function(story)
 {
+  var max_distribution_index = this._story_size_distribution.length - 1;  
+  var value_index = Math.round(Math.random() * max_distribution_index);
+  story.size = this._story_size_distribution[value_index];
+
   this._current_story = story;
   this._current_work_remaining = story.size; 
 }
@@ -135,7 +136,6 @@ EndUsers.prototype.report_to = function(report)
     value_sum += this._story_queue[i].value;
   }
   report.total_value_delivered_is(value_sum);
-  report.total_story_count_delivered_is(this._story_queue.length);
 };
 
 var SupportTeam = function()
@@ -177,9 +177,8 @@ var BugStory = function()
 BugStory.prototype.size = 0;
 BugStory.prototype.value = 0;
 
-var BusinessCustomers = function(story_size_distribution)
+var BusinessCustomers = function()
 {
-  this._story_size_distribution = story_size_distribution;
 };
 BusinessCustomers.prototype.deliver_new_stories_to = function(queue)
 {
@@ -192,25 +191,17 @@ BusinessCustomers.prototype.deliver_new_stories_to = function(queue)
 };
 BusinessCustomers.prototype._get_next_story = function()
 {
-  var max_distribution_index = this._story_size_distribution.length - 1;
-  
-  //pick a random number between 0 and max_distribution_index
-  var index_to_use = Math.round(Math.random() * max_distribution_index);
   var story = new UserStory();
-  
-  var value_index = Math.round(Math.random() * max_distribution_index);
-  story.size = this._story_size_distribution[value_index];
   story.value = 1;
-  
   return story;
 };
 
-var DevelopmentProcess = function(business_customer, product_backlog, development_team, done_queue, bug_queue, report)
+var DevelopmentProcess = function(business_customer, product_backlog, development_team, end_users, bug_queue, report)
 {
   this._business_customer = business_customer;
   this._product_backlog = product_backlog;
   this._development_team = development_team;
-  this._done_queue = done_queue;
+  this._end_users = end_users;
   this._bug_queue = bug_queue;
   this._report = report;
 };
@@ -220,38 +211,23 @@ DevelopmentProcess.prototype.iterate = function()
 
   this._business_customer.deliver_new_stories_to(this._product_backlog);
   this._development_team.work_from(this._product_backlog);
-  this._development_team.move_finished_stories_to(this._done_queue);
-  this._done_queue.test_stories_and_report_failures_to(this._bug_queue);
+  this._development_team.move_finished_stories_to(this._end_users);
+  this._end_users.test_stories_and_report_failures_to(this._bug_queue);
   this._bug_queue.prioritize_and_move_bugs_to(this._product_backlog);
   
-  this._product_backlog.report_to(this._report);
-  this._done_queue.report_to(this._report);
-  this._bug_queue.report_to(this._report);
+  this._end_users.report_to(this._report);
 };
 
-var Report = function(next_name, story_throughput_field, value_throughput_field, bugs_name, color, chart)
+var Report = function(color, chart)
 {
-  this._next_field_name = next_name;
-  this._value_throughput_field = value_throughput_field;
-  this._story_throughput_field = story_throughput_field;
-  this._bugs_field_name = bugs_name;
   this._iteration = 0;
   this._iteration_ids = [];
   this._chart = chart;
   this._color = color;
 };
-Report.prototype.that_backlog_size_is = function(this_size)
+Report.prototype.total_value_delivered_is = function(value_delivered)
 {
-};
-Report.prototype.total_bugs_found_are = function(this_many)
-{
-};
-Report.prototype.total_value_delivered_is = function(this_many)
-{
-  this._chart.plot(this._iteration, this_many, this._color);
-};
-Report.prototype.total_story_count_delivered_is = function(this_many)
-{
+  this._chart.plot(this._iteration, value_delivered, this._color);
 };
 Report.prototype.next_iteration = function()
 {
@@ -265,11 +241,11 @@ var DevelopmentProcessFactory = function(tdd_comparison_chart)
 };
 DevelopmentProcessFactory.prototype.create_tdd_development = function (simulation_settings)
 {
-  var tdd_report = new Report('tdd_next_queue_length', 'tdd_story_throughput', 'tdd_value_throughput', 'tdd_bugs_found_count', 'green', this._tdd_comparison_chart);
+  var tdd_report = new Report('green', this._tdd_comparison_chart);
   
-  var business_customers = new BusinessCustomers(simulation_settings.story_size_distribution);
+  var business_customers = new BusinessCustomers();
   var product_backlog = new ProductBacklog();
-  var development_team = new DevelopmentTeam(simulation_settings.min_tdd_velocity, simulation_settings.max_tdd_velocity);
+  var development_team = new DevelopmentTeam(simulation_settings.min_tdd_velocity, simulation_settings.max_tdd_velocity, simulation_settings.story_size_distribution);
   var end_users = new EndUsers(simulation_settings.tdd_defect_ratio, simulation_settings.bug_size_distribution);
   var support_team = new SupportTeam();
   
@@ -277,11 +253,11 @@ DevelopmentProcessFactory.prototype.create_tdd_development = function (simulatio
 };
 DevelopmentProcessFactory.prototype.create_std_development = function(simulation_settings)
 {
-  var std_report = new Report('std_next_queue_length', 'std_story_throughput', 'std_value_throughput', 'std_bugs_found_count', 'red', this._tdd_comparison_chart);
+  var std_report = new Report('red', this._tdd_comparison_chart);
   
-  var business_customers = new BusinessCustomers(simulation_settings.story_size_distribution);
+  var business_customers = new BusinessCustomers();
   var product_backlog = new ProductBacklog();
-  var development_team = new DevelopmentTeam(simulation_settings.min_std_velocity, simulation_settings.max_std_velocity);
+  var development_team = new DevelopmentTeam(simulation_settings.min_std_velocity, simulation_settings.max_std_velocity, simulation_settings.story_size_distribution);
   var end_users = new EndUsers(simulation_settings.std_defect_ratio, simulation_settings.bug_size_distribution);
   var support_team = new SupportTeam();
   
@@ -293,7 +269,7 @@ var SimulatedDevelopmentTeams = function(simulation_settings)
   this._development_teams = [];
   this._simulation_settings = simulation_settings;
 };
-SimulatedDevelopmentTeams.prototype.create_required_tdd_teams_using = function(development_process_factory)
+SimulatedDevelopmentTeams.prototype.create_tdd_development_teams_using = function(development_process_factory)
 {
   for(var tdd_teams_to_add = this._simulation_settings.teams_to_simulate; tdd_teams_to_add > 0; tdd_teams_to_add--)
   {
@@ -301,7 +277,7 @@ SimulatedDevelopmentTeams.prototype.create_required_tdd_teams_using = function(d
     this._development_teams.push(tdd_developmental_process);
   }
 };
-SimulatedDevelopmentTeams.prototype.create_required_std_teams_using = function(development_process_factory)
+SimulatedDevelopmentTeams.prototype.create_standard_development_teams_using = function(development_process_factory)
 {
   for(var std_teams_to_add = this._simulation_settings.teams_to_simulate; std_teams_to_add > 0; std_teams_to_add--)
   {
