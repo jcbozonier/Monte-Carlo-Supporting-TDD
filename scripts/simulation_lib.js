@@ -36,22 +36,19 @@ ProductBacklog.prototype.add_bug = function(story)
   }
 };
 
-var DevelopmentTeam = function(minimum_velocity, max_velocity, story_size_distribution)
+var DevelopmentTeam = function(story_size_distribution)
 {
   this._story_size_distribution = story_size_distribution;
-  this._minimum_velocity = minimum_velocity;
-  this._velocity = minimum_velocity;
-  this._max_velocity = max_velocity;
   this._completed_stories = [];
   this._current_story = null;
   this._current_work_remaining = 0;
-  this._current_iteration = 0;
+  this._current_iteration_id = 0;
 };
 DevelopmentTeam.prototype.work_from = function(queue)
 {    
-  this._current_iteration += 1;
+  this._current_iteration_id += 1;
   
-  for(var i=0; i < this._velocity; i++)
+  for(var i=0; i < this._iteration_budget; i++)
   {
     if(this._current_story == null)
       queue.pull_next_story_to(this);
@@ -72,7 +69,7 @@ DevelopmentTeam.prototype._ramp_up_velocity = function()
 {
   //using learning curve shape documented here: http://en.m.wikipedia.org/wiki/Learning_curves
   //thanks to Robert Ream
-  this._velocity = this._max_velocity - (this._max_velocity - this._minimum_velocity) * Math.pow(this._current_iteration, - (1/3));
+  this._iteration_budget = this._max_velocity - (this._max_velocity - this._minimum_velocity) * Math.pow(this._current_iteration_id, - (1/3));
 };
 DevelopmentTeam.prototype.add = function(story)
 {
@@ -83,7 +80,7 @@ DevelopmentTeam.prototype.add = function(story)
   this._current_story = story;
   this._current_work_remaining = story.size; 
 }
-DevelopmentTeam.prototype.move_finished_stories_to = function(queue)
+DevelopmentTeam.prototype.deliver_finished_stories_to = function(queue)
 {
   var story = this._completed_stories.pop();
   
@@ -95,12 +92,20 @@ DevelopmentTeam.prototype.move_finished_stories_to = function(queue)
   
   this._completed_stories = [];
 };
-
-var EndUsers = function(defect_to_story_point_ratio_per_iteration, bug_size_distribution)
+DevelopmentTeam.prototype.velocity_begins_at = function(value)
 {
-  this._failure_rate = defect_to_story_point_ratio_per_iteration;
+  this._minimum_velocity = value;
+  this._iteration_budget = value;
+};
+DevelopmentTeam.prototype.maximum_possible_velocity_is = function(value)
+{
+  this._max_velocity = value;
+};
+
+var EndUsers = function(random_sample_generator)
+{
   this._story_queue = [];
-  this._bug_size_distribution = bug_size_distribution;
+  this._random_sample_generator = random_sample_generator;
 };
 EndUsers.prototype.add = function(story)
 {
@@ -109,6 +114,11 @@ EndUsers.prototype.add = function(story)
 };
 EndUsers.prototype.test_stories_and_report_failures_to = function(queue)
 {
+  // This could be _much_ better...
+  // Thinking I may be missing an object here.
+  // All I really need is to tell some object
+  // how many stories I have so it can compute
+  // the number of bugs I should have.
   var queue_length = this._story_queue.length;
   
   for(var i = queue_length-1; i >= 0; i--)
@@ -116,13 +126,10 @@ EndUsers.prototype.test_stories_and_report_failures_to = function(queue)
     var random_number = Math.random();
     
     if(random_number <= this._failure_rate)
-    {
-      var bug_size_index = Math.floor(Math.random() * this._bug_size_distribution.length);
-      var bug_size = this._bug_size_distribution[bug_size_index];
-      
+    {      
       var bug = new BugStory();
       bug.value = 0;
-      bug.size = bug_size;
+      bug.size = this._random_sample_generator.next_value();
       
       queue.add(bug);
     }
@@ -136,6 +143,25 @@ EndUsers.prototype.report_to = function(report)
     value_sum += this._story_queue[i].value;
   }
   report.total_value_delivered_is(value_sum);
+};
+EndUsers.prototype.find_this_many_bugs_per_story_per_iteration = function(value)
+{
+  this._failure_rate = value
+};
+
+var DiscreteDistribution = function()
+{
+};
+DiscreteDistribution.prototype.use_these_as_samples = function(samples)
+{
+  this._sample_distribution = samples;
+};
+DiscreteDistribution.prototype.next_value = function()
+{
+  var random_index = Math.floor(Math.random() * this._sample_distribution.length);
+  var chosen_element = this._sample_distribution[random_index];
+  
+  return chosen_element;
 };
 
 var SupportTeam = function()
@@ -211,23 +237,31 @@ DevelopmentProcess.prototype.iterate = function()
 
   this._business_customer.deliver_new_stories_to(this._product_backlog);
   this._development_team.work_from(this._product_backlog);
-  this._development_team.move_finished_stories_to(this._end_users);
+  this._development_team.deliver_finished_stories_to(this._end_users);
   this._end_users.test_stories_and_report_failures_to(this._bug_queue);
   this._bug_queue.prioritize_and_move_bugs_to(this._product_backlog);
   
   this._end_users.report_to(this._report);
 };
 
-var Report = function(color, chart)
+var Report = function()
 {
   this._iteration = 0;
   this._iteration_ids = [];
-  this._chart = chart;
-  this._color = color;
+  this._chart = null;
+  this._color_name = 'black';
 };
 Report.prototype.total_value_delivered_is = function(value_delivered)
 {
-  this._chart.plot(this._iteration, value_delivered, this._color);
+  this._chart.plot(this._iteration, value_delivered, this._color_name);
+};
+Report.prototype.plot_results_in_color = function(color_name)
+{
+  this._color_name = color_name;
+};
+Report.prototype.plot_results_on = function(chart)
+{
+  this._chart = chart;
 };
 Report.prototype.next_iteration = function()
 {
@@ -239,29 +273,57 @@ var DevelopmentProcessFactory = function(tdd_comparison_chart)
 {
   this._tdd_comparison_chart = tdd_comparison_chart;
 };
+DevelopmentProcessFactory.prototype.chart_
 DevelopmentProcessFactory.prototype.create_tdd_development = function (simulation_settings)
 {
-  var tdd_report = new Report('green', this._tdd_comparison_chart);
+  var tdd_development_team_report = new Report();
+  tdd_development_team_report.plot_results_in_color('green');
+  tdd_development_team_report.plot_results_on(this._tdd_comparison_chart);
   
   var business_customers = new BusinessCustomers();
+  
   var product_backlog = new ProductBacklog();
-  var development_team = new DevelopmentTeam(simulation_settings.min_tdd_velocity, simulation_settings.max_tdd_velocity, simulation_settings.story_size_distribution);
-  var end_users = new EndUsers(simulation_settings.tdd_defect_ratio, simulation_settings.bug_size_distribution);
+  
+  var development_team = new DevelopmentTeam(simulation_settings.story_size_distribution);
+  development_team.velocity_begins_at(simulation_settings.min_tdd_velocity);
+  development_team.maximum_possible_velocity_is(simulation_settings.max_tdd_velocity);
+  
+  var random_bug_size_generator = new DiscreteDistribution();
+  random_bug_size_generator.use_these_as_samples(simulation_settings.bug_size_distribution);
+  
+  var end_users = new EndUsers(random_bug_size_generator);
+  end_users.find_this_many_bugs_per_story_per_iteration(simulation_settings.tdd_defect_ratio);
+  
   var support_team = new SupportTeam();
   
-  return new DevelopmentProcess(business_customers, product_backlog, development_team, end_users, support_team, tdd_report);
+  var development_process = new DevelopmentProcess(business_customers, product_backlog, development_team, end_users, support_team, tdd_development_team_report);
+  
+  return development_process;
 };
 DevelopmentProcessFactory.prototype.create_std_development = function(simulation_settings)
 {
-  var std_report = new Report('red', this._tdd_comparison_chart);
+  var standard_development_team_report = new Report();
+  standard_development_team_report.plot_results_in_color('red');
+  standard_development_team_report.plot_results_on(this._tdd_comparison_chart);
   
   var business_customers = new BusinessCustomers();
   var product_backlog = new ProductBacklog();
-  var development_team = new DevelopmentTeam(simulation_settings.min_std_velocity, simulation_settings.max_std_velocity, simulation_settings.story_size_distribution);
-  var end_users = new EndUsers(simulation_settings.std_defect_ratio, simulation_settings.bug_size_distribution);
+  
+  var development_team = new DevelopmentTeam(simulation_settings.story_size_distribution);
+  development_team.velocity_begins_at(simulation_settings.min_tdd_velocity);
+  development_team.maximum_possible_velocity_is(simulation_settings.max_tdd_velocity);
+  
+  var random_bug_size_generator = new DiscreteDistribution();
+  random_bug_size_generator.use_these_as_samples(simulation_settings.bug_size_distribution);
+  
+  var end_users = new EndUsers(random_bug_size_generator);
+  end_users.find_this_many_bugs_per_story_per_iteration(simulation_settings.std_defect_ratio);
+  
   var support_team = new SupportTeam();
   
-  return new DevelopmentProcess(business_customers, product_backlog, development_team, end_users, support_team, std_report);
+  var development_process = new DevelopmentProcess(business_customers, product_backlog, development_team, end_users, support_team, standard_development_team_report);
+  
+  return development_process;
 };
 
 var SimulatedDevelopmentTeams = function(simulation_settings)
